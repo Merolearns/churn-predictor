@@ -66,6 +66,13 @@ def test_full_pipeline_predicts(sample_df):
     assert len(preds) == len(y)
 
 
+def test_split_missing_target_raises_clear_error(sample_df):
+    # a frame without the churn column used to die with a bare KeyError
+    df = sample_df.drop(columns=["churn"])
+    with pytest.raises(ValueError, match="missing required columns"):
+        features.split_features_target(df)
+
+
 def test_feature_names_match_width(sample_df):
     X, _ = features.split_features_target(sample_df)
     pre = features.build_preprocessor()

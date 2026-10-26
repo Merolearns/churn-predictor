@@ -29,6 +29,11 @@ def load(csv_path: str) -> pd.DataFrame:
 
 
 def split_features_target(df: pd.DataFrame):
+    # Fail with a readable message instead of a bare KeyError when a
+    # column is missing (e.g. a hand-edited CSV that dropped churn).
+    missing = [c for c in [TARGET, ID_COL] if c not in df.columns]
+    if missing:
+        raise ValueError(f"missing required columns: {missing}")
     X = df.drop(columns=[TARGET, ID_COL])
     y = df[TARGET]
     return X, y
