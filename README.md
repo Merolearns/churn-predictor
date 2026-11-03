@@ -17,6 +17,49 @@ python api.py                  # prediction API on http://localhost:5000
 pytest                         # run the tests
 ```
 
+## Web UI
+
+`app.py` is a designed Flask dashboard over the real model (prediction logic
+is shared with `api.py`, nothing is reimplemented):
+
+```bash
+python app.py    # then open http://localhost:5000
+```
+
+Three pages:
+
+- **Predict** — a customer form (tenure, charges, support calls, contract,
+  internet service, payment, household) with quick-fill buttons for two
+  verified example profiles, plus a result card showing the churn probability
+  as a big number, a green-to-red risk bar, and the verdict. The same
+  `POST /predict` JSON contract from `api.py` still works.
+- **Model insights** — the 3-model comparison table (accuracy, precision,
+  recall, F1, ROC-AUC, tuned threshold) read from `reports/metrics.json`,
+  plus a captioned gallery of the real EDA and evaluation figures.
+- **Batch scoring** — upload a CSV of customer rows (same columns as
+  `data/churn.csv`; `customer_id` and `churn` are optional), get every row
+  scored through the model, a summary (n scored, n flagged), a 25-row
+  preview table, and a download of the full scored CSV. A "Try the 30-row
+  sample" button downloads 30 real rows from the dataset to try with.
+
+Honest worked example (run against the model on my machine):
+
+- At-risk: tenure 3 months, $95.50/mo, $286.50 total, 4 support calls,
+  month-to-month contract, fiber optic, electronic check, no partner/dependents
+  → churn probability **0.9606** — "Likely to churn".
+- Loyal: tenure 60 months, $45.00/mo, $2700.00 total, 0 support calls,
+  two-year contract, DSL, credit card, partner + dependents
+  → churn probability **0.0327** — "Likely to stay".
+  (Decision threshold 0.25, tuned on train CV.)
+
+Note: the app needs the data and the trained model to exist. On a fresh
+clone, run `python data/generate.py` and `python train.py` first (both are
+gitignored, so they aren't in the repo) — the app exits with a clear message
+if the model is missing. The figure PNGs are generated locally by
+`python eda.py` / `python train.py` and are never pushed to git; the Model
+insights page shows a "run the script to generate this figure" placeholder
+for any that are absent, and the metrics table degrades the same way.
+
 ## Results (on my synthetic data, 5000 rows, 80/20 stratified split, thresholds tuned on train CV)
 
 | Model | Threshold | Accuracy | Precision | Recall | F1 | ROC-AUC |
