@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% set active = "predict" %}
+{% block title %}Predict &mdash; Churn Predictor{% endblock %}
+{% block content %}
+<main class="card">
+  <div class="quickfill">
+    <span>Try a verified example:</span>
+    <button type="button" class="btn btn-ghost btn-sm" id="fill-risk">At-risk profile</button>
+    <button type="button" class="btn btn-ghost btn-sm" id="fill-loyal">Loyal profile</button>
+  </div>
+
+  <form method="post" action="{{ url_for('index') }}" id="predict-form">
+    <div class="form-grid">
+      <label class="field"><span>Tenure (months)</span>
+        <input name="tenure" type="number" min="1" max="72" value="{{ record.tenure if record else 6 }}" required></label>
+      <label class="field"><span>Monthly charges ($)</span>
+        <input name="monthly_charges" type="number" step="0.01" min="0" value="{{ record.monthly_charges if record else 89.99 }}" required></label>
+      <label class="field"><span>Total charges ($)</span>
+        <input name="total_charges" type="number" step="0.01" min="0" value="{{ record.total_charges if record else 540 }}" required></label>
+      <label class="field"><span>Support calls</span>
+        <input name="support_calls" type="number" min="0" max="20" value="{{ record.support_calls if record else 3 }}" required></label>
+      <label class="field"><span>Contract type</span>
+        <select name="contract_type">
+          {% for c in ["Month-to-month", "One year", "Two year"] %}
+          <option{% if record and record.contract_type == c %} selected{% endif %}>{{ c }}</option>
+          {% endfor %}
+        </select></label>
+      <label class="field"><span>Internet service</span>
+        <select name="internet_service">
+          {% for c in ["Fiber optic", "DSL", "No internet"] %}
+          <option{% if record and record.internet_service == c %} selected{% endif %}>{{ c }}</option>
+          {% endfor %}
+        </select></label>
+      <label class="field"><span>Payment method</span>
+        <select name="payment_method">
+          {% for c in ["Electronic check", "Mailed check", "Bank transfer", "Credit card"] %}
+          <option{% if record and record.payment_method == c %} selected{% endif %}>{{ c }}</option>
+          {% endfor %}
+        </select></label>
+      <div class="field checks">
+        <span class="field-label">Household</span>
+        <label><input name="senior_citizen" type="checkbox"{% if record and record.senior_citizen %} checked{% endif %}> Senior citizen</label>
+        <label><input name="partner" type="checkbox"{% if record and record.partner %} checked{% endif %}> Has partner</label>
+        <label><input name="dependents" type="checkbox"{% if record and record.dependents %} checked{% endif %}> Has dependents</label>
+      </div>
+    </div>
+    <button type="submit" class="btn btn-primary">Predict churn risk</button>
+  </form>
+
+  {% if result %}
+  <section class="result {% if result.probability >= result.threshold %}risk{% else %}safe{% endif %}">
+    <div class="result-head">
+      <div>
+        <p class="result-verdict">{{ result.verdict }}</p>
+        <p class="result-note">Decision threshold {{ "%.2f"|format(result.threshold) }} (tuned on train CV), served by {{ model_name }}</p>
+      </div>
+      <p class="result-prob">{{ "%.0f"|format(result.probability * 100) }}<span>%</span></p>
+    </div>
+    <div class="risk-bar"><div class="risk-marker" style="left: {{ "%.1f"|format(result.probability * 100) }}%"></div></div>
+    <p class="result-sub">Churn probability for this customer profile.</p>
+  </section>
+  {% endif %}
+</main>
+
+<section class="card">
+  <h2>Programmatic access</h2>
+  <p class="muted">The same model also serves JSON, exactly as <code>api.py</code> defines it:</p>
+<pre><code>curl -X POST localhost:5000/predict -H "Content-Type: application/json" -d '{
+  "tenure": 3, "monthly_charges": 95.5, "total_charges": 286.5,
+  "contract_type": "Month-to-month", "internet_service": "Fiber optic",
+  "payment_method": "Electronic check", "senior_citizen": 0,
+  "partner": 0, "dependents": 0, "support_calls": 4}'
+# {"churn_probability": 0.9606, "prediction": "churn"}</code></pre>
+</section>
+
+<script>
+// verified against the running model (at-risk -> 0.96 churn, loyal -> 0.03)
+const EXAMPLES = {
+  at_risk: {tenure: 3, monthly_charges: 95.5, total_charges: 286.5, support_calls: 4,
+    contract_type: "Month-to-month", internet_service: "Fiber optic",
+    payment_method: "Electronic check", senior_citizen: false, partner: false, dependents: false},
+  loyal: {tenure: 60, monthly_charges: 45.0, total_charges: 2700.0, support_calls: 0,
+    contract_type: "Two year", internet_service: "DSL",
+    payment_method: "Credit card", senior_citizen: false, partner: true, dependents: true}
+};
+function fill(name) {
+  const f = document.getElementById("predict-form");
+  const e = EXAMPLES[name];
+  for (const k of Object.keys(e)) {
+    const el = f.elements[k];
+    if (!el) continue;
+    if (el.type === "checkbox") el.checked = e[k];
+    else el.value = e[k];
+  }
+}
+document.getElementById("fill-risk").addEventListener("click", () => fill("at_risk"));
+document.getElementById("fill-loyal").addEventListener("click", () => fill("loyal"));
+</script>
+{% endblock %}

@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Churn Predictor{% endblock %}</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div class="page">
+  <header class="hero">
+    <h1>Churn Predictor</h1>
+    <p class="subtitle">A synthetic-data exercise in the full ML workflow: generate,
+      explore, train, tune, evaluate, serve. Trained on a synthetic telecom
+      dataset &mdash; metrics are a workflow exercise, not a business result.</p>
+    <nav class="nav">
+      <a href="{{ url_for('index') }}" class="{% if active=='predict' %}active{% endif %}">Predict</a>
+      <a href="{{ url_for('explore') }}" class="{% if active=='explore' %}active{% endif %}">Model insights</a>
+      <a href="{{ url_for('batch') }}" class="{% if active=='batch' %}active{% endif %}">Batch scoring</a>
+    </nav>
+  </header>
+  {% block content %}{% endblock %}
+</div>
+</body>
+</html>

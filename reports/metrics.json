@@ -1,0 +1,32 @@
+{
+  "models": {
+    "logreg": {
+      "accuracy": 0.772,
+      "precision": 0.5816993464052288,
+      "recall": 0.6402877697841727,
+      "f1": 0.6095890410958904,
+      "roc_auc": 0.8099155025010462,
+      "threshold": 0.35
+    },
+    "random_forest": {
+      "accuracy": 0.678,
+      "precision": 0.4533898305084746,
+      "recall": 0.7697841726618705,
+      "f1": 0.5706666666666667,
+      "roc_auc": 0.7741236373781861,
+      "threshold": 0.25
+    },
+    "gradient_boosting": {
+      "accuracy": 0.729,
+      "precision": 0.5083932853717026,
+      "recall": 0.762589928057554,
+      "f1": 0.6100719424460431,
+      "roc_auc": 0.8021184160704676,
+      "threshold": 0.25
+    }
+  },
+  "best_model": "gradient_boosting",
+  "n_test": 1000,
+  "test_churn_rate": 0.278,
+  "dataset": "data/churn.csv (synthetic, 5000 rows)"
+}

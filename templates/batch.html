@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% set active = "batch" %}
+{% block title %}Batch scoring &mdash; Churn Predictor{% endblock %}
+{% block content %}
+<main class="card">
+  <h2>Score a CSV of customers</h2>
+  <p class="muted">Upload rows with the same columns as <code>data/churn.csv</code>.
+    <code>customer_id</code> and <code>churn</code> are optional &mdash; extra
+    columns are ignored, missing ones are reported.</p>
+
+  {% if error %}
+  <div class="alert">{{ error }}</div>
+  {% endif %}
+
+  <form method="post" enctype="multipart/form-data" class="inline-form">
+    <input type="file" name="csv" accept=".csv" required>
+    <button type="submit" class="btn btn-primary">Score file</button>
+    <a class="btn btn-ghost" href="{{ url_for('batch_sample') }}">Try the 30-row sample</a>
+  </form>
+
+  {% if result %}
+  <div class="stats">
+    <div class="stat"><span class="stat-num">{{ result.n }}</span><span class="stat-label">rows scored</span></div>
+    <div class="stat"><span class="stat-num">{{ result.flagged }}</span><span class="stat-label">flagged as churn</span></div>
+    <div class="stat"><span class="stat-num">{{ "%.0f"|format(result.n and (result.flagged / result.n * 100)) }}%</span><span class="stat-label">flag rate</span></div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          {% for c in result.columns %}<th>{{ c }}</th>{% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in result.rows %}
+        <tr>
+          {% for c in result.columns %}
+          <td{% if c == "prediction" %} class="{{ 'bad' if row[c] == 'churn' else 'good' }}"{% endif %}>{{ row[c] }}</td>
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="muted">Showing the first 25 rows. Full results:</p>
+  <a class="btn btn-ghost" href="{{ url_for('batch_download', token=result.token) }}">Download scored CSV</a>
+  {% endif %}
+</main>
+{% endblock %}
