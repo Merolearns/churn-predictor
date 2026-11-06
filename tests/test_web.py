@@ -129,6 +129,16 @@ def test_figures_degrade_when_missing(monkeypatch, client):
     assert b"<img" not in r.data
 
 
+def test_form_predict_non_numeric_field_shows_error(client):
+    # a hand-built POST with tenure="abc" used to 500 in _form_record,
+    # which ran outside the try - now a plain 200 with a clear message
+    r = client.post("/", data=_form_data(tenure="abc"))
+    assert r.status_code == 200
+    assert b"must be numbers" in r.data
+    assert b"Likely to churn" not in r.data
+    assert b"Likely to stay" not in r.data
+
+
 def test_app_fails_fast_without_model(tmp_path):
     # run app.py from a directory with no models/ - must exit with a
     # clear, actionable message instead of a bare FileNotFoundError

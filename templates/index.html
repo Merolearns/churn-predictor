@@ -3,6 +3,9 @@
 {% block title %}Predict &mdash; Churn Predictor{% endblock %}
 {% block content %}
 <main class="card">
+  {% if error %}
+  <div class="alert">{{ error }}</div>
+  {% endif %}
   <div class="quickfill">
     <span>Try a verified example:</span>
     <button type="button" class="btn btn-ghost btn-sm" id="fill-risk">At-risk profile</button>

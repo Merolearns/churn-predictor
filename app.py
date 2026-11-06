@@ -123,11 +123,16 @@ def _verdict(probability: float) -> str:
 def index():
     result = None
     record = None
+    error = None
     if request.method == "POST":
-        record = _form_record(request.form)
         try:
+            record = _form_record(request.form)
             out = predict_one(record)
         except (ValueError, KeyError):
+            # _form_record raises ValueError on a non-numeric field; the
+            # browser's type=number inputs normally prevent it, but a
+            # hand-built POST (curl, tweaked HTML) used to 500 here
+            error = "Tenure, charges and support calls must be numbers."
             out = None
         if out is not None:
             result = {
@@ -144,6 +149,7 @@ def index():
         "index.html",
         result=result,
         record=record,
+        error=error,
         model_name=model_name,
         threshold=THRESHOLD,
     )
