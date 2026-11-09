@@ -113,6 +113,48 @@ def test_batch_scores_csv(client):
     assert b"churn" in r.data and b"stay" in r.data  # per-row verdicts
 
 
+BATCH_HEADER = (
+    "customer_id,tenure,monthly_charges,total_charges,contract_type,"
+    "internet_service,payment_method,senior_citizen,partner,dependents,"
+    "support_calls,churn\n"
+)
+GOOD_ROW = "C1,3,95.5,286.5,Month-to-month,Fiber optic,Electronic check,0,0,0,4,1\n"
+BAD_ROW = "C2,abc,45.0,2700.0,Two year,DSL,Credit card,0,1,1,0,0\n"
+
+
+def _post_batch(client, csv):
+    return client.post(
+        "/batch",
+        data={"csv": (io.BytesIO(csv.encode()), "rows.csv")},
+        content_type="multipart/form-data",
+    )
+
+
+def test_batch_skips_bad_row_and_scores_good_row(client):
+    # one bad value used to 500 the whole upload
+    r = _post_batch(client, BATCH_HEADER + GOOD_ROW + BAD_ROW)
+    assert r.status_code == 200
+    assert b"Skipped 1 row(s)" in r.data
+    assert b"(rows: 2)" in r.data
+    assert b"<td>C1</td>" in r.data
+    assert b"<td>C2</td>" not in r.data
+
+    token = next(
+        t for t, df in app._scored.items() if list(df["customer_id"]) == ["C1"]
+    )
+    r = client.get(f"/batch/download/{token}")
+    assert b"C1" in r.data and b"C2" not in r.data
+
+
+def test_batch_all_rows_bad_shows_note_without_download(client):
+    r = _post_batch(client, BATCH_HEADER + BAD_ROW + BAD_ROW)
+    assert r.status_code == 200
+    assert b"Skipped 2 row(s)" in r.data
+    assert b"(rows: 1, 2)" in r.data
+    assert b"No rows could be scored" in r.data
+    assert b"Download scored CSV" not in r.data
+
+
 def test_batch_sample_downloads(client):
     r = client.get("/batch/sample")
     assert r.status_code == 200

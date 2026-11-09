@@ -25,6 +25,11 @@
     <div class="stat"><span class="stat-num">{{ "%.0f"|format(result.n and (result.flagged / result.n * 100)) }}%</span><span class="stat-label">flag rate</span></div>
   </div>
 
+  {% if result.skipped %}
+  <p class="muted">Skipped {{ result.skipped|length }} row(s) with values the model could not use (rows: {{ result.skipped|join(", ") }}).</p>
+  {% endif %}
+
+  {% if result.n %}
   <div class="table-wrap">
     <table>
       <thead>
@@ -45,6 +50,9 @@
   </div>
   <p class="muted">Showing the first 25 rows. Full results:</p>
   <a class="btn btn-ghost" href="{{ url_for('batch_download', token=result.token) }}">Download scored CSV</a>
+  {% else %}
+  <div class="alert">No rows could be scored, so there is nothing to download.</div>
+  {% endif %}
   {% endif %}
 </main>
 {% endblock %}

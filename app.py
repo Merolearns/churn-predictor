@@ -219,10 +219,18 @@ def batch():
                     error = "The CSV has no rows."
                 else:
                     probs = []
-                    for _, row in df.iterrows():
-                        out = predict_one({c: row[c] for c in REQUIRED})
+                    good = []
+                    skipped = []
+                    for pos, (_, row) in enumerate(df.iterrows()):
+                        # one bad row must not cost the user the whole file
+                        try:
+                            out = predict_one({c: row[c] for c in REQUIRED})
+                        except (ValueError, KeyError, TypeError):
+                            skipped.append(pos + 1)
+                            continue
+                        good.append(pos)
                         probs.append(out["churn_probability"])
-                    scored = df.copy()
+                    scored = df.iloc[good].copy()
                     scored["churn_probability"] = [round(p, 4) for p in probs]
                     scored["prediction"] = [
                         "churn" if p >= THRESHOLD else "stay" for p in probs
@@ -236,6 +244,7 @@ def batch():
                         "token": token,
                         "rows": scored.head(25).to_dict("records"),
                         "columns": list(scored.columns),
+                        "skipped": skipped,
                     }
     return render_template("batch.html", result=result, error=error, threshold=THRESHOLD)
 
