@@ -39,7 +39,18 @@ def predict_one(record: dict) -> dict:
     missing = [c for c in REQUIRED if c not in record]
     if missing:
         raise ValueError(f"missing fields: {missing}")
-    df = pd.DataFrame([{c: record[c] for c in REQUIRED}])
+    # impossible inputs get a clear error, not a confident prediction:
+    # a -5 month tenure or -$100 charge is a typo, not a customer
+    row = {c: record[c] for c in REQUIRED}
+    for c in features.NUMERIC:
+        try:
+            value = float(record[c])
+        except (TypeError, ValueError):
+            raise ValueError(f"{c} must be a number")
+        if value < 0:
+            raise ValueError(f"{c} must be 0 or more")
+        row[c] = value
+    df = pd.DataFrame([row])
     proba = float(MODEL.predict_proba(PRE.transform(df))[0, 1])
     return {
         "churn_probability": round(proba, 4),

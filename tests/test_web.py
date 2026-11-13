@@ -22,6 +22,23 @@ def test_index_loads(client):
     assert b"Churn Predictor" in r.data
 
 
+def _valid_json(**overrides):
+    data = {
+        "tenure": 3,
+        "monthly_charges": 95.5,
+        "total_charges": 286.5,
+        "contract_type": "Month-to-month",
+        "internet_service": "Fiber optic",
+        "payment_method": "Electronic check",
+        "senior_citizen": 0,
+        "partner": 0,
+        "dependents": 0,
+        "support_calls": 4,
+    }
+    data.update(overrides)
+    return data
+
+
 def test_predict_json_valid(client):
     r = client.post(
         "/predict",
@@ -42,6 +59,19 @@ def test_predict_json_valid(client):
     body = r.get_json()
     assert 0.0 <= body["churn_probability"] <= 1.0
     assert body["prediction"] in ("churn", "stay")
+
+
+def test_predict_json_negative_value(client):
+    # a negative tenure used to return a confident prediction
+    r = client.post("/predict", json=_valid_json(tenure=-1))
+    assert r.status_code == 400
+    assert "tenure must be 0 or more" in r.get_json()["error"]
+
+
+def test_predict_json_non_numeric_value(client):
+    r = client.post("/predict", json=_valid_json(monthly_charges="abc"))
+    assert r.status_code == 400
+    assert "monthly_charges must be a number" in r.get_json()["error"]
 
 
 def test_predict_json_missing_field(client):
@@ -179,6 +209,25 @@ def test_form_predict_non_numeric_field_shows_error(client):
     assert b"must be numbers" in r.data
     assert b"Likely to churn" not in r.data
     assert b"Likely to stay" not in r.data
+
+
+def test_form_predict_negative_value_shows_error(client):
+    # a negative tenure is a typo, not a customer - no verdict, just the error
+    r = client.post("/", data=_form_data(tenure="-3"))
+    assert r.status_code == 200
+    assert b"tenure must be 0 or more" in r.data
+    assert b"Likely to churn" not in r.data
+    assert b"Likely to stay" not in r.data
+
+
+def test_batch_skips_negative_row(client):
+    # an impossible value skips the row like any other bad row
+    bad_row = "C2,-5,45.0,2700.0,Two year,DSL,Credit card,0,1,1,0,0\n"
+    r = _post_batch(client, BATCH_HEADER + GOOD_ROW + bad_row)
+    assert r.status_code == 200
+    assert b"Skipped 1 row(s)" in r.data
+    assert b"<td>C1</td>" in r.data
+    assert b"<td>C2</td>" not in r.data
 
 
 def test_app_fails_fast_without_model(tmp_path):

@@ -99,7 +99,10 @@ _scored = {}
 
 def _form_record(form) -> dict:
     def num(key, cast):
-        return cast(form.get(key, "0") or 0)
+        try:
+            return cast(form.get(key, "0") or 0)
+        except (TypeError, ValueError):
+            raise ValueError("Tenure, charges and support calls must be numbers.")
 
     return {
         "tenure": num("tenure", int),
@@ -128,10 +131,13 @@ def index():
         try:
             record = _form_record(request.form)
             out = predict_one(record)
-        except (ValueError, KeyError):
-            # _form_record raises ValueError on a non-numeric field; the
-            # browser's type=number inputs normally prevent it, but a
-            # hand-built POST (curl, tweaked HTML) used to 500 here
+        except ValueError as e:
+            # _form_record raises the plain-numbers message for a
+            # non-numeric field; predict_one raises a specific one
+            # (e.g. "tenure must be 0 or more") for an impossible value
+            error = str(e)
+            out = None
+        except KeyError:
             error = "Tenure, charges and support calls must be numbers."
             out = None
         if out is not None:
