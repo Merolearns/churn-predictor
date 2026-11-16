@@ -259,7 +259,15 @@ def batch():
 def batch_sample():
     # 30 real rows from the dataset, kept with their labels so you can
     # eyeball the model's calls against the true outcome
-    df = pd.read_csv("data/churn.csv", nrows=30)
+    try:
+        df = pd.read_csv("data/churn.csv", nrows=30)
+    except FileNotFoundError:
+        # fresh clone before data/generate.py: a clear 404, not a 500
+        return (
+            "Sample data not generated yet - run `python data/generate.py` first.",
+            404,
+            {"Content-Type": "text/plain; charset=utf-8"},
+        )
     buf = io.StringIO()
     df.to_csv(buf, index=False)
     return send_file(

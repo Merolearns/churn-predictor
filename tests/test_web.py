@@ -192,6 +192,18 @@ def test_batch_sample_downloads(client):
     assert b"customer_id" in r.data
 
 
+def test_batch_sample_missing_data_returns_404(monkeypatch, client):
+    # fresh clone before data/generate.py: a clear 404, not a 500
+    def missing(*args, **kwargs):
+        raise FileNotFoundError("data/churn.csv")
+
+    monkeypatch.setattr("app.pd.read_csv", missing)
+    r = client.get("/batch/sample")
+    assert r.status_code == 404
+    assert b"Sample data not generated yet" in r.data
+    assert b"python data/generate.py" in r.data
+
+
 def test_figures_degrade_when_missing(monkeypatch, client):
     # PNGs are never pushed to git - the page must degrade to hints
     monkeypatch.setattr("app.os.path.exists", lambda p: False)
