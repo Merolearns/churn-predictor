@@ -10,6 +10,7 @@ Run: python train.py [--data data/churn.csv]
 """
 
 import argparse
+import json
 import os
 import pickle
 
@@ -93,6 +94,31 @@ def evaluate(name, model, X_train, y_train, X_test, y_test):
     return scores
 
 
+def write_metrics(results, best, n_test, test_churn_rate, dataset):
+    """Write the per-model scores to reports/metrics.json.
+
+    The dashboard's Model insights page reads this file, and the README
+    and explore.html both say train.py generates it — but until now
+    train.py never wrote it, so on a fresh clone the metrics table could
+    never appear no matter how many times you trained. Scores are cast
+    to plain floats so the file is always JSON-serializable.
+    """
+    payload = {
+        "models": {
+            name: {k: float(v) for k, v in scores.items()}
+            for name, scores in results.items()
+        },
+        "best_model": best,
+        "n_test": int(n_test),
+        "test_churn_rate": float(test_churn_rate),
+        "dataset": dataset,
+    }
+    os.makedirs("reports", exist_ok=True)
+    with open("reports/metrics.json", "w") as f:
+        json.dump(payload, f, indent=2)
+    print("saved -> reports/metrics.json")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--data", default="data/churn.csv")
@@ -113,6 +139,16 @@ def main() -> None:
 
     best = max(results, key=lambda n: results[n]["f1"])
     print(f"\nbest model by F1: {best} ({results[best]['f1']:.4f})")
+
+    # the dashboard reads this file - without it the Model insights
+    # page degrades to a "run train.py" hint forever
+    write_metrics(
+        results,
+        best,
+        len(y_test),
+        float(y_test.mean()),
+        f"{args.data} (synthetic, {len(y_train) + len(y_test)} rows)",
+    )
 
     # save the winner + the fitted preprocessor + tuned threshold together
     with open("models/churn_model.pkl", "wb") as f:
