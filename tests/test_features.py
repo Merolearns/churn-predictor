@@ -73,6 +73,15 @@ def test_split_missing_target_raises_clear_error(sample_df):
         features.split_features_target(df)
 
 
+def test_split_missing_feature_column_raises_clear_error(sample_df):
+    # a frame missing a feature column used to pass the check and die
+    # later inside the ColumnTransformer with sklearn's wording
+    df = sample_df.drop(columns=["tenure"])
+    with pytest.raises(ValueError, match="missing required columns") as excinfo:
+        features.split_features_target(df)
+    assert "tenure" in str(excinfo.value)
+
+
 def test_feature_names_match_width(sample_df):
     X, _ = features.split_features_target(sample_df)
     pre = features.build_preprocessor()
